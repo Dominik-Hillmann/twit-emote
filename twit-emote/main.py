@@ -1,16 +1,17 @@
 import text2emotion
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 import twitter
 from dotenv import load_dotenv
 import os
 import text2emotion as t2e
+import bleach
+from datetime import datetime
+from create_plot import create_plot
+import time
 
-
-from test_plot import plot_radar
-# Libraries
-import matplotlib.pyplot as plt
-# import pandas as pd
-from math import pi
+import requests
+from PIL import Image
 
 load_dotenv()
 print(os.getenv('TOKEN'))
@@ -26,47 +27,54 @@ twitter_api = twitter.Api(
 
 # print(twitter_api.VerifyCredentials())
 
-@app.get('/radar/{handle}')
-def create_radar_graph(handle: str) -> None:
-    try:
-        statuses = twitter_api.GetUserTimeline(screen_name = handle)
-    except NameError as e:
-        return { 'error': f'User {handle} does not exist: {e}' }
+@app.get('/{handles}')
+def create_radar_graph(handles: str) -> None:
+    print(handles)
+    handles = bleach.clean(handles)
+    handles = handles.split(',')
+    print(handles)
+    filename = f'{str(datetime.now()).replace(" ", "_")}.jpg'
 
-    print([s.text for s in statuses])
-    happy, angry, surprise, sad, fear = 0.0, 0.0, 0.0, 0.0, 0.0
-    for status in statuses:
-        tweet_text = status.text
-        emotions = t2e.get_emotion(tweet_text)
+    emotions_collector = []
+    for handle in handles:
+        time.sleep(1)
+        print(handle)
+        try:
+            statuses = twitter_api.GetUserTimeline(
+                screen_name = handle,
+                include_rts = False
+            )
+        except NameError as e:
+            return { 'error': f'User {handle} does not exist: {e}' }
 
-        happy += emotions['Happy']
-        sad += emotions['Sad']
-        surprise += emotions['Surprise']
-        angry += emotions['Angry']
-        fear += emotions['Fear']
+        # print([s.text for s in statuses])
+        
+        profile_url = twitter_api.GetUser(screen_name = handles[0]).profile_image_url
+        profile_img = Image.open(requests.get(profile_url, stream=True).raw)
+        profile_img.save(os.path.join('img', f'{handle}.png'))
 
-    sum_emotions = sum([happy, angry, surprise, sad, fear])
-    print([happy / sum_emotions, angry / sum_emotions, surprise / sum_emotions, sad / sum_emotions, fear / sum_emotions])
-    emotions = [
-        happy / sum_emotions, 
-        angry / sum_emotions, 
-        surprise / sum_emotions, 
-        sad / sum_emotions, 
-        fear / sum_emotions
-    ]
-    print(sum_emotions)
-    plot_radar(emotions)
+        happy, angry, surprise, sad, fear = 0.0, 0.0, 0.0, 0.0, 0.0
+        for status in statuses:
+            tweet_text = status.text
+            emotions = t2e.get_emotion(tweet_text)
 
+            happy += emotions['Happy']
+            sad += emotions['Sad']
+            surprise += emotions['Surprise']
+            angry += emotions['Angry']
+            fear += emotions['Fear']
 
-    return { 
-        'name': handle,
-        'length': len(statuses),
-        'tweets': [
-            happy / sum_emotions, 
-            angry / sum_emotions, 
-            surprise / sum_emotions, 
-            sad / sum_emotions, 
-            fear / sum_emotions
-        ]#,
-        # 'emotions': [ t2e.get_emotion(s.text) for s in statuses ]
-    }
+        sum_emotions = sum([happy, angry, surprise, sad, fear])
+        emotions = {
+            'Happy': happy / sum_emotions, 
+            'Angry': angry / sum_emotions, 
+            'Surprise': surprise / sum_emotions, 
+            'Sad': sad / sum_emotions, 
+            'Fear': fear / sum_emotions
+        }
+
+        emotions_collector.append(emotions)
+
+    create_plot(filename, emotions_collector)
+
+    return FileResponse(os.path.join('img', filename))

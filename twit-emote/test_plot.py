@@ -105,26 +105,58 @@ data = [
         [0.88, 0.01, 0.03, 0.03, 0.00],
         [0.07, 0.95, 0.04, 0.05, 0.00],
         [0.01, 0.02, 0.85, 0.19, 0.05],
-        [0.02, 0.01, 0.07, 0.01, 0.21],
+        [0.02, 0.01, 0.07, 1.00, 0.21],
         [0.01, 0.01, 0.02, 0.71, 0.74]
     ])
 ]
 
-N = len(data[0])
-theta = radar_factory(N)#, frame='polygon')
+# N = len(data[0])
+# theta = radar_factory(N)#, frame='polygon')
 
-spoke_labels = data.pop(0)
-title, case_data = data[0]
+# spoke_labels = data.pop(0)
+# title, case_data = data[0]
 
-fig, ax = plt.subplots(figsize = (6, 6), subplot_kw = dict(projection = 'radar'))
-fig.subplots_adjust(top = 0.85, bottom = 0.05)
+# fig, ax = plt.subplots(figsize = (6, 6), subplot_kw = dict(projection = 'radar'))
+# fig.subplots_adjust(top = 0.85, bottom = 0.05)
 
-ax.set_rgrids([0.2, 0.4, 0.6, 0.8])
-# ax.set_title(title,  position=(0.5, 1.1), ha='center')
+# # ax.set_rgrids([0.2, 0.4, 0.6, 0.8])
+# # ax.set_title(title,  position=(0.5, 1.1), ha='center')
 
-for d in case_data:
-    line = ax.plot(theta, d)
-    ax.fill(theta, d,  alpha=0.25)
-ax.set_varlabels(spoke_labels)
+# for d in case_data:
+#     line = ax.plot(theta, d)
+#     ax.fill(theta, d,  alpha=0.25)
+# ax.set_varlabels(spoke_labels)
 
-plt.show()
+# plt.show()
+#@title Radar Plot Round 1
+
+# Each attribute we'll plot in the radar chart.
+def plot_radar(values):
+    labels = ['Happy', 'Sad', 'Surprise', 'Angry', 'Fear']
+
+    # Let's look at the 1970 Chevy Impala and plot it.
+    # values = [1.0, 0.7, 0.7, 0.2, 0.1]
+
+    # Number of variables we're plotting.
+    num_vars = len(labels)
+
+    # Split the circle into even parts and save the angles
+    # so we know where to put each axis.
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+
+    # The plot is a circle, so we need to "complete the loop"
+    # and append the start value to the end.
+    values += values[:1]
+    angles += angles[:1]
+
+    # ax = plt.subplot(polar=True)
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+
+    # Draw the outline of our data.
+    ax.plot(angles, values, color='red', linewidth=1)
+    # Fill it in.
+    ax.fill(angles, values, color='red', alpha=0.25)
+
+    ax.set_yticklabels([])
+    ax.set_theta_direction(-1)
+    plt.show()

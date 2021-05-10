@@ -12,7 +12,7 @@ def to_ordered_emotions_list(emotions_dict: Dict[str, float]) -> List[float]:
         emotions_dict['Angry'],
         emotions_dict['Surprise'],
         emotions_dict['Fear'],
-        emotions_dict['Happy'] # To connect last line.
+        emotions_dict['Happy'] # To connect last line, repeat first value (and key).
     ]
 
 

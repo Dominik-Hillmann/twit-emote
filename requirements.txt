@@ -29,6 +29,7 @@ nltk==3.6.2
 numexpr==2.7.3
 numpy==1.20.2
 oauthlib==3.1.0
+opencv-python==4.5.2.52
 orca==1.6
 orjson==3.5.2
 packaging==20.9

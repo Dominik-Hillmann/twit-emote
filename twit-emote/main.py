@@ -56,7 +56,10 @@ def create_radar_graph(handles: str) -> FileResponse:
         profile_url = twitter_api.GetUser(screen_name = handles[0]).profile_image_url
         profile_img = Image.open(requests.get(profile_url, stream=True).raw)
         profile_img = crop_circular(profile_img)
+
         profile_img.save(os.path.join('img', f'{handle}.png'))
+        profile_img = add_colored_corona(profile_img)
+        profile_img.save(os.path.join('img', f'{handle}-circled.png'))
 
         happy, angry, surprise, sad, fear = 0.0, 0.0, 0.0, 0.0, 0.0
         for status in statuses:
@@ -78,34 +81,69 @@ def create_radar_graph(handles: str) -> FileResponse:
                 'Sad': sad / sum_emotions, 
                 'Fear': fear / sum_emotions
             }
-
             emotions_collector.append(emotions)
+
         except ZeroDivisionError:
             continue
 
     create_plot(filename, emotions_collector)
 
-    radar = Image.open(os.path.join('img', filename))
+    radar_plot = Image.open(os.path.join('img', filename))
 
-    radar.paste(profile_img, (1, 1))
-    radar.save(os.path.join('img', 'radar.png'))
+    # radar_plot.paste(profile_img, (1, 1))
+    radar_plot = paste_keeping_transparency(radar_plot, profile_img)
+    radar_plot.save(os.path.join('img', 'radar.png'))
 
-    return FileResponse(os.path.join('img', filename))
+    return FileResponse(os.path.join('img', 'radar.png'))
 
+
+def add_colored_corona(
+    profile_img: Image.Image, 
+    num_corona_px: int = 3,
+    color = (100, 200, 0)
+) -> Image.Image:
+    profile_img_arr = np.array(profile_img)
+    orig_width, orig_height, orig_channels = profile_img_arr.shape
+
+    new_dims = (orig_height + num_corona_px, orig_width + num_corona_px, orig_channels)
+    radius = (orig_height + num_corona_px) // 2
+    center = (radius, radius)
+
+    # blank = Image.fromarray(np.zeros(new_dims, np.uint8))
+    blank = np.zeros(new_dims, np.uint8)
+    circled = cv2.circle(blank, center, radius, color, radius)
+    print(circled)
+    # circled = paste_keeping_transparency(circled, profile_img)
+    return Image.fromarray(circled)
+    # print(profile_img_arr.shape)
+    # return profile_img
+
+
+def paste_keeping_transparency(
+    background: Image.Image, 
+    pasted: Image.Image
+) -> Image.Image:
+    background = np.array(background)
+    pasted = np.array(pasted)
+    
+    x_offset, y_offset = 0, 0
+    y1, y2 = y_offset, y_offset + pasted.shape[0]
+    x1, x2 = x_offset, x_offset + pasted.shape[1]
+
+    alpha_pasted = pasted[:, :, 3] / 255.0
+    alpha_background = 1.0 - alpha_pasted
+
+    for channel in range(0, 3):
+        background[y1:y2, x1:x2, channel] = (
+            alpha_pasted * pasted[:, :, channel] + 
+            alpha_background * background[y1:y2, x1:x2, channel]
+        )
+
+    return Image.fromarray(background)
 
 
 
 def crop_circular(img: Image.Image) -> Image.Image:
-    # background = Image.new('RGBA', (50, 50), color = 0)
-    # background = cv2.circle(
-    #     np.array(background), 
-    #     (25, 25), 
-    #     25, 
-    #     'red', 
-    #     30
-    # )
-    # Center coordinates
-
     background = np.zeros((64, 64, 3), np.uint8)
     center_coordinates = (32, 32)
     
@@ -149,12 +187,13 @@ def crop_circular(img: Image.Image) -> Image.Image:
     result = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
     result[:, :, 3] = mask[:, :, 0]
 
-    result = Image.fromarray(result)
-    ImageDraw.floodfill(result, (1, 1), (255, 255, 0, 0))
+    # result = Image.fromarray(result)
+    # ImageDraw.floodfill(result, (1, 1), (255, 255, 0, 0))
 
-    # background = cv2.cvtColor(background, cv2.COLOR_BGR2BGRA)
-    # background[7:55, 7:55, :] = result
-    return result
+    background = cv2.cvtColor(background, cv2.COLOR_BGR2BGRA)
+    background[7:55, 7:55, :] = result
+    
+    return Image.fromarray(result)
 
 
 

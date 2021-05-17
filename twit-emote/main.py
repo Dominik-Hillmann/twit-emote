@@ -111,10 +111,18 @@ def add_colored_corona(
 
     # blank = Image.fromarray(np.zeros(new_dims, np.uint8))
     blank = np.zeros(new_dims, np.uint8)
-    circled = cv2.circle(blank, center, radius, color, radius)
-    print(circled)
+    circled = cv2.circle(blank, center, radius, color, -1)
+
+    # import sys
+    # np.set_printoptions(threshold=sys.maxsize)
+    # print(circled)
     # circled = paste_keeping_transparency(circled, profile_img)
-    return Image.fromarray(circled)
+    
+    img = np.zeros((512,512,4), np.uint8)
+    
+    cv2.circle(img, (447, 63), 63, (0, 0, 255), -1)
+    return Image.fromarray(img)
+    # return Image.fromarray(circled)
     # print(profile_img_arr.shape)
     # return profile_img
 

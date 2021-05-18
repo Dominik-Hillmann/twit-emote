@@ -1,3 +1,4 @@
+from typing import Tuple
 import text2emotion
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -91,7 +92,7 @@ def create_radar_graph(handles: str) -> FileResponse:
     radar_plot = Image.open(os.path.join('img', filename))
 
     # radar_plot.paste(profile_img, (1, 1))
-    radar_plot = paste_keeping_transparency(radar_plot, profile_img)
+    radar_plot = paste_keeping_transparency(radar_plot, profile_img, (100, 100))
     radar_plot.save(os.path.join('img', 'radar.png'))
 
     return FileResponse(os.path.join('img', 'radar.png'))
@@ -99,29 +100,42 @@ def create_radar_graph(handles: str) -> FileResponse:
 
 def add_colored_corona(
     profile_img: Image.Image, 
-    num_corona_px: int = 3,
+    num_corona_px: int = 20,
     color = (100, 200, 0)
 ) -> Image.Image:
     profile_img_arr = np.array(profile_img)
     orig_width, orig_height, orig_channels = profile_img_arr.shape
 
-    new_dims = (orig_height + num_corona_px, orig_width + num_corona_px, orig_channels)
+    new_dims = (orig_height + num_corona_px - 1, orig_width + num_corona_px - 1)
     radius = (orig_height + num_corona_px) // 2
     center = (radius, radius)
 
+    circled = Image.new('RGBA', new_dims)
+    draw_circled = ImageDraw.Draw(circled)
+    draw_circled.ellipse((0, 0, *new_dims), fill = 'blue')
+
+    circled = paste_keeping_transparency(circled, profile_img, center)
     # blank = Image.fromarray(np.zeros(new_dims, np.uint8))
-    blank = np.zeros(new_dims, np.uint8)
-    circled = cv2.circle(blank, center, radius, color, -1)
+    # blank = np.zeros(new_dims, np.uint8)
+    # circled = cv2.circle(blank, center, radius, color, -1)
 
     # import sys
     # np.set_printoptions(threshold=sys.maxsize)
     # print(circled)
+    # print(circled[25, 25, :])
+    # print(type(circled), circled[25, 25, :])
+    # for height_px in range(new_dims[0]):
+    #     for width_px in range(new_dims[1]):
+    #         channels = circled[height_px, width_px, :]
+    #         any_channel_empty = channels[0] == 0 or channels[1] == 0 or channels[2] == 0
+    #         if not any_channel_empty:
+    #             circled[height_px, width_px, 3] = 1.0
     # circled = paste_keeping_transparency(circled, profile_img)
     
-    img = np.zeros((512,512,4), np.uint8)
+    # img = np.zeros((512,512,4), np.uint8)
     
-    cv2.circle(img, (447, 63), 63, (0, 0, 255), -1)
-    return Image.fromarray(img)
+    # cv2.circle(img, (447, 63), 63, (0, 0, 255), -1)
+    return circled
     # return Image.fromarray(circled)
     # print(profile_img_arr.shape)
     # return profile_img
@@ -129,14 +143,20 @@ def add_colored_corona(
 
 def paste_keeping_transparency(
     background: Image.Image, 
-    pasted: Image.Image
+    pasted: Image.Image,
+    center_pos: Tuple[int, int]
 ) -> Image.Image:
+    center_x, center_y = center_pos
     background = np.array(background)
     pasted = np.array(pasted)
+
+    pasted_height, pasted_width = pasted.shape[0], pasted.shape[1]
     
     x_offset, y_offset = 0, 0
-    y1, y2 = y_offset, y_offset + pasted.shape[0]
-    x1, x2 = x_offset, x_offset + pasted.shape[1]
+    y1, y2 = center_y - (pasted_height // 2), center_y + (pasted_height // 2)
+    x1, x2 = center_x - (pasted_width // 2), center_x + (pasted_width // 2)
+    # y1, y2 = y_offset, y_offset + pasted.shape[0]
+    # x1, x2 = x_offset, x_offset + pasted.shape[1]
 
     alpha_pasted = pasted[:, :, 3] / 255.0
     alpha_background = 1.0 - alpha_pasted
@@ -152,21 +172,22 @@ def paste_keeping_transparency(
 
 
 def crop_circular(img: Image.Image) -> Image.Image:
-    background = np.zeros((64, 64, 3), np.uint8)
-    center_coordinates = (32, 32)
+    orig_height, orig_width, orig_channels = np.array(img).shape
+    background = np.zeros((orig_height, orig_width, orig_channels), np.uint8)
+    center_coordinates = (orig_height // 2, orig_width // 2)
     
     # Radius of circle
-    radius = 32
+    # radius = orig_height // 2
     
     # Red color in BGR
-    color = (255, 0, 0)
+    # color = (255, 0, 0)
     
     # Line thickness of -1 px
-    thickness = -1
+    # thickness = -1
     
     # Using cv2.circle() method
     # Draw a circle of red color of thickness -1 px
-    background = cv2.circle(background, center_coordinates, radius, color, thickness)
+    # background = cv2.circle(background, center_coordinates, radius, color, thickness)
     
 
     # img = cv2.imread('lena.jpg')
@@ -199,7 +220,7 @@ def crop_circular(img: Image.Image) -> Image.Image:
     # ImageDraw.floodfill(result, (1, 1), (255, 255, 0, 0))
 
     background = cv2.cvtColor(background, cv2.COLOR_BGR2BGRA)
-    background[7:55, 7:55, :] = result
+    # background[7:55, 7:55, :] = result
     
     return Image.fromarray(result)
 

@@ -8,5 +8,3 @@ COPY ./ ./app
 
 CMD ["pip", "install", "-r", "requirements.txt"]
 CMD ["bash", "run-prod.sh"]
-# 
-COPY ./app /app

@@ -1,10 +1,7 @@
-FROM python:3.7
-
-RUN pip install fastapi uvicorn
-
-EXPOSE 80
+FROM python:3.9
 
 COPY ./ ./app
+RUN pip install -r requirements.txt
 
-CMD ["pip", "install", "-r", "requirements.txt"]
-CMD ["bash", "run-prod.sh"]
+EXPOSE 6000
+CMD ["python" "./src/main.py"]
